@@ -5,8 +5,8 @@ package com.xxl.job.core.enums;
  */
 public enum ExecutorBlockStrategyEnum {
 
-    SERIAL_EXECUTION("Serial execution"),
-    /*CONCURRENT_EXECUTION("并行"),*/
+    SERIAL_EXECUTION("Serial Execution"),
+    CONCURRENT_EXECUTION("Concurrent Execution"),
     DISCARD_LATER("Discard Later"),
     COVER_EARLY("Cover Early");
 

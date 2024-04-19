@@ -15,6 +15,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Date;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Created by xuxueli on 17/3/1.
@@ -32,13 +33,15 @@ public class ExecutorBizImpl implements ExecutorBiz {
 
         // isRunningOrHasQueue
         boolean isRunningOrHasQueue = false;
-        JobThread jobThread = XxlJobExecutor.loadJobThread(idleBeatParam.getJobId());
-        if (jobThread != null && jobThread.isRunningOrHasQueue()) {
-            isRunningOrHasQueue = true;
-        }
+        CopyOnWriteArrayList<JobThread> jobThreads = XxlJobExecutor.loadJobThread(idleBeatParam.getJobId());
+        for(JobThread jobThread : jobThreads) {
+        	if (jobThread != null && jobThread.isRunningOrHasQueue()) {
+        	    isRunningOrHasQueue = true;
+        	}
 
-        if (isRunningOrHasQueue) {
-            return new ReturnT<String>(ReturnT.FAIL_CODE, "job thread is running or has trigger queue.");
+        	if (isRunningOrHasQueue) {
+        	    return new ReturnT<String>(ReturnT.FAIL_CODE, "job thread is running or has trigger queue.");
+        	}
         }
         return ReturnT.SUCCESS;
     }
@@ -46,8 +49,8 @@ public class ExecutorBizImpl implements ExecutorBiz {
     @Override
     public ReturnT<String> run(TriggerParam triggerParam) {
         // load old：jobHandler + jobThread
-        JobThread jobThread = XxlJobExecutor.loadJobThread(triggerParam.getJobId());
-        IJobHandler jobHandler = jobThread!=null?jobThread.getHandler():null;
+        CopyOnWriteArrayList<JobThread> jobThreads = XxlJobExecutor.loadJobThread(triggerParam.getJobId());
+        IJobHandler jobHandler = jobThreads!=null && jobThreads.size() > 0?jobThreads.get(0).getHandler():null;
         String removeOldReason = null;
 
         // valid：jobHandler + jobThread
@@ -58,11 +61,11 @@ public class ExecutorBizImpl implements ExecutorBiz {
             IJobHandler newJobHandler = XxlJobExecutor.loadJobHandler(triggerParam.getExecutorHandler());
 
             // valid old jobThread
-            if (jobThread!=null && jobHandler != newJobHandler) {
+            if (jobThreads!=null && jobThreads.size() > 0 && jobHandler != newJobHandler) {
                 // change handler, need kill old thread
                 removeOldReason = "change jobhandler or glue type, and terminate the old job thread.";
 
-                jobThread = null;
+                jobThreads = null;
                 jobHandler = null;
             }
 
@@ -77,13 +80,13 @@ public class ExecutorBizImpl implements ExecutorBiz {
         } else if (GlueTypeEnum.GLUE_GROOVY == glueTypeEnum) {
 
             // valid old jobThread
-            if (jobThread != null &&
-                    !(jobThread.getHandler() instanceof GlueJobHandler
-                        && ((GlueJobHandler) jobThread.getHandler()).getGlueUpdatetime()==triggerParam.getGlueUpdatetime() )) {
+            if (jobThreads != null && jobThreads.size() > 0 &&
+                    !(jobThreads.get(0).getHandler() instanceof GlueJobHandler
+                        && ((GlueJobHandler) jobThreads.get(0).getHandler()).getGlueUpdatetime()==triggerParam.getGlueUpdatetime() )) {
                 // change handler or gluesource updated, need kill old thread
                 removeOldReason = "change job source or glue type, and terminate the old job thread.";
 
-                jobThread = null;
+                jobThreads = null;
                 jobHandler = null;
             }
 
@@ -100,13 +103,13 @@ public class ExecutorBizImpl implements ExecutorBiz {
         } else if (glueTypeEnum!=null && glueTypeEnum.isScript()) {
 
             // valid old jobThread
-            if (jobThread != null &&
-                    !(jobThread.getHandler() instanceof ScriptJobHandler
-                            && ((ScriptJobHandler) jobThread.getHandler()).getGlueUpdatetime()==triggerParam.getGlueUpdatetime() )) {
+            if (jobThreads != null && jobThreads.size() > 0 &&
+                    !(jobThreads.get(0).getHandler() instanceof ScriptJobHandler
+                            && ((ScriptJobHandler) jobThreads.get(0).getHandler()).getGlueUpdatetime()==triggerParam.getGlueUpdatetime() )) {
                 // change script or gluesource updated, need kill old thread
                 removeOldReason = "change job source or glue type, and terminate the old job thread.";
 
-                jobThread = null;
+                jobThreads = null;
                 jobHandler = null;
             }
 
@@ -119,41 +122,51 @@ public class ExecutorBizImpl implements ExecutorBiz {
         }
 
         // executor block strategy
-        if (jobThread != null) {
+        Boolean parallel = false;
+        if (jobThreads != null && jobThreads.size() > 0) {
             ExecutorBlockStrategyEnum blockStrategy = ExecutorBlockStrategyEnum.match(triggerParam.getExecutorBlockStrategy(), null);
             if (ExecutorBlockStrategyEnum.DISCARD_LATER == blockStrategy) {
                 // discard when running
-                if (jobThread.isRunningOrHasQueue()) {
-                    return new ReturnT<String>(ReturnT.FAIL_CODE, "block strategy effect："+ExecutorBlockStrategyEnum.DISCARD_LATER.getTitle());
-                }
+            	for(JobThread jobThread : jobThreads) {
+					if (jobThread.isRunningOrHasQueue()) {
+						return new ReturnT<String>(ReturnT.FAIL_CODE, "block strategy effect："+ExecutorBlockStrategyEnum.DISCARD_LATER.getTitle());
+					}
+            	}
             } else if (ExecutorBlockStrategyEnum.COVER_EARLY == blockStrategy) {
                 // kill running jobThread
-                if (jobThread.isRunningOrHasQueue()) {
-                    removeOldReason = "block strategy effect：" + ExecutorBlockStrategyEnum.COVER_EARLY.getTitle();
+					removeOldReason = "block strategy effect：" + ExecutorBlockStrategyEnum.COVER_EARLY.getTitle();
 
-                    jobThread = null;
-                }
+					jobThreads = null;
+            } else if (ExecutorBlockStrategyEnum.CONCURRENT_EXECUTION == blockStrategy) {
+            	parallel = true;
             } else {
                 // just queue trigger
             }
         }
 
         // replace thread (new or exists invalid)
-        if (jobThread == null) {
-            jobThread = XxlJobExecutor.registJobThread(triggerParam.getJobId(), jobHandler, removeOldReason);
+        JobThread jbtd = null;
+        if (!parallel && (jobThreads == null || jobThreads.size() == 0)) {
+            jbtd  = XxlJobExecutor.registJobThread(triggerParam.getJobId(), triggerParam.getLogId(), jobHandler, removeOldReason);
+        } else if(parallel) {
+        	jbtd = XxlJobExecutor.registJobThread(triggerParam.getJobId(), triggerParam.getLogId(), jobHandler, parallel);
+        } else {
+        	jbtd = jobThreads.get(jobThreads.size() - 1);
         }
 
         // push data to queue
-        ReturnT<String> pushResult = jobThread.pushTriggerQueue(triggerParam);
+        ReturnT<String> pushResult = jbtd.pushTriggerQueue(triggerParam);
         return pushResult;
     }
 
     @Override
     public ReturnT<String> kill(KillParam killParam) {
         // kill handlerThread, and create new one
-        JobThread jobThread = XxlJobExecutor.loadJobThread(killParam.getJobId());
+        JobThread jobThread = XxlJobExecutor.loadJobThread(killParam.getJobId(), killParam.getLogId());
         if (jobThread != null) {
-            XxlJobExecutor.removeJobThread(killParam.getJobId(), "scheduling center kill job.");
+        	//String key = String.format("%i-%i", killParam.getJobId(), killParam.getLogId());
+            XxlJobExecutor.removeJobThread(killParam.getJobId(), killParam.getLogId(), "scheduling center kill job.");
+            //XxlJobExecutor.removeJobThread(key, "scheduling center kill job.");
             return ReturnT.SUCCESS;
         }
 

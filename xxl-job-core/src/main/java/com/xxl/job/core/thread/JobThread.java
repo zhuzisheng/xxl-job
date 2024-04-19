@@ -31,22 +31,25 @@ public class JobThread extends Thread{
 	private IJobHandler handler;
 	private LinkedBlockingQueue<TriggerParam> triggerQueue;
 	private Set<Long> triggerLogIdSet;		// avoid repeat trigger for the same TRIGGER_LOG_ID
+	private long logId;
 
 	private volatile boolean toStop = false;
 	private String stopReason;
 
     private boolean running = false;    // if running job
 	private int idleTimes = 0;			// idel times
+	
+	
 
-
-	public JobThread(int jobId, IJobHandler handler) {
+	public JobThread(int jobId, long logId, IJobHandler handler) {
 		this.jobId = jobId;
 		this.handler = handler;
 		this.triggerQueue = new LinkedBlockingQueue<TriggerParam>();
 		this.triggerLogIdSet = Collections.synchronizedSet(new HashSet<Long>());
+		this.logId = logId;
 
 		// assign job thread name
-		this.setName("xxl-job, JobThread-"+jobId+"-"+System.currentTimeMillis());
+		this.setName("xxl-job, JobThread-"+jobId+"-"+logId+"-"+System.currentTimeMillis());
 	}
 	public IJobHandler getHandler() {
 		return handler;
@@ -185,7 +188,8 @@ public class JobThread extends Thread{
 				} else {
 					if (idleTimes > 30) {
 						if(triggerQueue.size() == 0) {	// avoid concurrent trigger causes jobId-lost
-							XxlJobExecutor.removeJobThread(jobId, "excutor idel times over limit.");
+							//String key = String.format("%i-%i", jobId, triggerParam.getLogId());
+							XxlJobExecutor.removeJobThread(jobId, logId, "excutor idel times over limit.");
 						}
 					}
 				}
@@ -249,4 +253,17 @@ public class JobThread extends Thread{
 
 		logger.info(">>>>>>>>>>> xxl-job JobThread stoped, hashCode:{}", Thread.currentThread());
 	}
+	public int getJobId() {
+		return jobId;
+	}
+	public void setJobId(int jobId) {
+		this.jobId = jobId;
+	}
+	public long getLogId() {
+		return logId;
+	}
+	public void setLogId(long logId) {
+		this.logId = logId;
+	}
+    
 }

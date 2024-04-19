@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ConcurrentMap;
 
 /**
@@ -90,15 +91,18 @@ public class XxlJobExecutor  {
 
         // destroy jobThreadRepository
         if (jobThreadRepository.size() > 0) {
-            for (Map.Entry<Integer, JobThread> item: jobThreadRepository.entrySet()) {
-                JobThread oldJobThread = removeJobThread(item.getKey(), "web container destroy and kill the job.");
+            //for (Map.Entry<Integer, JobThread> item: jobThreadRepository.entrySet()) {
+            for (Map.Entry<Integer, CopyOnWriteArrayList<JobThread>> item: jobThreadRepository.entrySet()) {
+                CopyOnWriteArrayList<JobThread> oldJobThreads = removeJobThread(item.getKey(), "web container destroy and kill the job.");
                 // wait for job thread push result to callback queue
-                if (oldJobThread != null) {
-                    try {
-                        oldJobThread.join();
-                    } catch (InterruptedException e) {
-                        logger.error(">>>>>>>>>>> xxl-job, JobThread destroy(join) error, jobId:{}", item.getKey(), e);
-                    }
+                if (oldJobThreads != null && oldJobThreads.size() > 0) {
+                	for(JobThread oldJobThread : oldJobThreads) {
+                		try {
+                			oldJobThread.join();
+                    	} catch (InterruptedException e) {
+                    		logger.error(">>>>>>>>>>> xxl-job, JobThread destroy(join) error, jobId:{}", item.getKey(), e);
+                    	}
+                	}
                 }
             }
             jobThreadRepository.clear();
@@ -239,33 +243,88 @@ public class XxlJobExecutor  {
 
 
     // ---------------------- job thread repository ----------------------
-    private static ConcurrentMap<Integer, JobThread> jobThreadRepository = new ConcurrentHashMap<Integer, JobThread>();
-    public static JobThread registJobThread(int jobId, IJobHandler handler, String removeOldReason){
-        JobThread newJobThread = new JobThread(jobId, handler);
+    //private static ConcurrentMap<Integer, JobThread> jobThreadRepository = new ConcurrentHashMap<Integer, JobThread>();
+    ///public static JobThread registJobThread(int jobId, IJobHandler handler, String removeOldReason){
+    private static ConcurrentMap<Integer, CopyOnWriteArrayList<JobThread>> jobThreadRepository = new ConcurrentHashMap<Integer, CopyOnWriteArrayList<JobThread>>();
+    public static JobThread registJobThread(int jobId, long logId, IJobHandler handler, String removeOldReason){
+        JobThread newJobThread = new JobThread(jobId, logId, handler);
         newJobThread.start();
         logger.info(">>>>>>>>>>> xxl-job regist JobThread success, jobId:{}, handler:{}", new Object[]{jobId, handler});
 
-        JobThread oldJobThread = jobThreadRepository.put(jobId, newJobThread);	// putIfAbsent | oh my god, map's put method return the old value!!!
-        if (oldJobThread != null) {
-            oldJobThread.toStop(removeOldReason);
-            oldJobThread.interrupt();
+        //JobThread oldJobThread = jobThreadRepository.put(jobId, newJobThread);	// putIfAbsent | oh my god, map's put method return the old value!!!
+        //JobThread oldJobThread = jobThreadRepository.put(String.format("%i-%i", jobId, logId), newJobThread);	// putIfAbsent | oh my god, map's put method return the old value!!!
+        CopyOnWriteArrayList<JobThread> oldJobThreads = jobThreadRepository.get(jobId);	// putIfAbsent | oh my god, map's put method return the old value!!!
+        if (oldJobThreads != null && oldJobThreads.size() > 0) {
+        	for(JobThread oldJobThread : oldJobThreads) {
+				oldJobThread.toStop(removeOldReason);
+				oldJobThread.interrupt();
+        	}
+        	oldJobThreads.removeAll(oldJobThreads);
+        } else if(oldJobThreads == null) {
+        	oldJobThreads = new CopyOnWriteArrayList<JobThread>();
+        	jobThreadRepository.put(jobId, oldJobThreads);
         }
-
+        oldJobThreads.add(newJobThread);
         return newJobThread;
     }
 
-    public static JobThread removeJobThread(int jobId, String removeOldReason){
-        JobThread oldJobThread = jobThreadRepository.remove(jobId);
-        if (oldJobThread != null) {
-            oldJobThread.toStop(removeOldReason);
-            oldJobThread.interrupt();
+    public static JobThread registJobThread(int jobId, long logId, IJobHandler handler, Boolean parallel){
+        JobThread newJobThread = new JobThread(jobId, logId, handler);
+        newJobThread.start();
+        logger.info(">>>>>>>>>>> xxl-job regist JobThread success, jobId:{}, handler:{}", new Object[]{jobId, handler});
 
-            return oldJobThread;
+        CopyOnWriteArrayList<JobThread> oldJobThreads = jobThreadRepository.get(jobId);	// putIfAbsent | oh my god, map's put method return the old value!!!
+        //JobThread oldJobThread = jobThreadRepository.put(String.format("%i-%i", jobId, logId), newJobThread);	// putIfAbsent | oh my god, map's put method return the old value!!!
+        if(oldJobThreads == null) {
+        	oldJobThreads = new CopyOnWriteArrayList<JobThread>();
+        }
+        oldJobThreads.add(newJobThread);
+        jobThreadRepository.put(jobId, oldJobThreads);
+        return newJobThread;
+    }
+
+    public static CopyOnWriteArrayList<JobThread> removeJobThread(int jobId, String removeOldReason){
+    //public static JobThread removeJobThread(String key, String removeOldReason){
+        CopyOnWriteArrayList<JobThread> oldJobThreads = jobThreadRepository.remove(jobId);
+        if (oldJobThreads != null && oldJobThreads.size() > 0) {
+        	for(JobThread oldJobThread : oldJobThreads) {
+				oldJobThread.toStop(removeOldReason);
+				oldJobThread.interrupt();
+        	}
+            return oldJobThreads;
+        }
+        return null;
+    }
+    
+    public static JobThread removeJobThread(int jobId, long logId, String removeOldReason){
+    //public static JobThread removeJobThread(String key, String removeOldReason){
+        CopyOnWriteArrayList<JobThread> oldJobThreads = jobThreadRepository.get(jobId);
+        if (oldJobThreads != null && oldJobThreads.size() > 0) {
+        	int size = oldJobThreads.size();
+        	for(int i=0; i<size; i++) {
+        		JobThread oldJobThread = oldJobThreads.get(i);
+        		if(oldJobThread.getLogId() == logId) {
+					oldJobThread.toStop(removeOldReason);
+					oldJobThread.interrupt();
+					oldJobThreads.remove(i);
+					return oldJobThread;
+        		}
+        	}
         }
         return null;
     }
 
-    public static JobThread loadJobThread(int jobId){
+    public static CopyOnWriteArrayList<JobThread> loadJobThread(int jobId){
         return jobThreadRepository.get(jobId);
+    }
+    
+    public static JobThread loadJobThread(int jobId, long logId){
+        CopyOnWriteArrayList<JobThread> jobThreads = jobThreadRepository.get(jobId);
+        for(JobThread jobThread : jobThreads) {
+        	if(jobThread.getJobId() == jobId && jobThread.getLogId() == logId) {
+        		return jobThread;
+        	}
+        }
+        return null;
     }
 }
