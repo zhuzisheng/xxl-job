@@ -1,5 +1,9 @@
 package com.xxl.job.admin;
 
+import java.util.TimeZone;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
@@ -8,8 +12,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  */
 @SpringBootApplication
 public class XxlJobAdminApplication {
-
 	public static void main(String[] args) {
+		Logger logger = LoggerFactory.getLogger("XxlJobAdminApplication");
+		logger.info("Setting default TimeZone to PST");	
+		TimeZone.setDefault(TimeZone.getTimeZone("PST"));
         SpringApplication.run(XxlJobAdminApplication.class, args);
 	}
 
