@@ -73,6 +73,12 @@
 			<version>${project.parent.version}</version>
 		</dependency>
 
+		<!-- https://mvnrepository.com/artifact/org.redisson/redisson-spring-boot-starter -->
+		<dependency>
+		    <groupId>org.redisson</groupId>
+		    <artifactId>redisson-spring-boot-starter</artifactId>
+		    <version>3.31.0</version>
+		</dependency>
 	</dependencies>
 
 	<build>

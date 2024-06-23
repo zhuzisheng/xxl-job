@@ -8,6 +8,7 @@
 
 		<result column="job_group" property="jobGroup" />
 		<result column="job_id" property="jobId" />
+		<result column="global_runid" property="globalRunId" />
 
 		<result column="executor_address" property="executorAddress" />
 		<result column="executor_handler" property="executorHandler" />
@@ -30,6 +31,7 @@
 		t.id,
 		t.job_group,
 		t.job_id,
+		t.global_runid,
 		t.executor_address,
 		t.executor_handler,
 		t.executor_param,
@@ -121,12 +123,14 @@
 		INSERT INTO xxl_job_log (
 			`job_group`,
 			`job_id`,
+			`global_runid`,
 			`trigger_time`,
 			`trigger_code`,
 			`handle_code`
 		) VALUES (
 			#{jobGroup},
 			#{jobId},
+			#{globalRunId},
 			#{triggerTime},
 			#{triggerCode},
 			#{handleCode}
@@ -269,5 +273,14 @@
 			FROM xxl_job_registry AS t2
 		)
 	-->
+	<select id="getByJobIdsAndGlobalRunId" resultMap="XxlJobLog">
+		SELECT <include refid="Base_Column_List" />
+		FROM xxl_job_log AS t
+		WHERE job_id in
+		<foreach collection="jobIds" item="item" open="(" close=")" separator="," >
+			#{item}
+		</foreach>
+			AND t.global_runid = #{globalRunId}
+	</select>
 
 </mapper>

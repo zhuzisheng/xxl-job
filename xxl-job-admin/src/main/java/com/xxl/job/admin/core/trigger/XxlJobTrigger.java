@@ -17,6 +17,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * xxl-job trigger
@@ -115,10 +118,24 @@ public class XxlJobTrigger {
         ExecutorRouteStrategyEnum executorRouteStrategyEnum = ExecutorRouteStrategyEnum.match(jobInfo.getExecutorRouteStrategy(), null);    // route strategy
         String shardingParam = (ExecutorRouteStrategyEnum.SHARDING_BROADCAST==executorRouteStrategyEnum)?String.valueOf(index).concat("/").concat(String.valueOf(total)):null;
 
+        String executorParam = jobInfo.getExecutorParam();
+        Map<String, String> params =  new HashMap<String, String>();
+        if(executorParam != null && executorParam.contains("GLOBAL_RUNID=")) {
+            String[] paramValues = executorParam.split(";");
+            for(int i=0; i<paramValues.length; i++) {
+                String[] data = paramValues[i].split("=");
+                if(data.length > 1) params.put(data[0], data[1]);
+            }
+        }
         // 1、save log-id
         XxlJobLog jobLog = new XxlJobLog();
         jobLog.setJobGroup(jobInfo.getJobGroup());
         jobLog.setJobId(jobInfo.getId());
+        if(params.containsKey("GLOBAL_RUNID")) {
+            jobLog.setGlobalRunId(params.get("GLOBAL_RUNID"));
+        } else {
+            jobLog.setGlobalRunId(UUID.randomUUID().toString());
+        }
         jobLog.setTriggerTime(new Date());
         XxlJobAdminConfig.getAdminConfig().getXxlJobLogDao().save(jobLog);
         logger.debug(">>>>>>>>>>> xxl-job trigger start, jobId:{}", jobLog.getId());
@@ -137,6 +154,7 @@ public class XxlJobTrigger {
         triggerParam.setGlueUpdatetime(jobInfo.getGlueUpdatetime().getTime());
         triggerParam.setBroadcastIndex(index);
         triggerParam.setBroadcastTotal(total);
+        
 
         // 3、init address
         String address = null;

@@ -1,11 +1,5 @@
-FROM openjdk:8-jre-slim
-MAINTAINER xuxueli
-
-ENV PARAMS=""
-
-ENV TZ=PRC
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-
-ADD target/xxl-job-admin-*.jar /app.jar
-
-ENTRYPOINT ["sh","-c","java -jar $JAVA_OPTS /app.jar $PARAMS"]
+FROM eclipse-temurin:17-jdk-alpine
+VOLUME /tmp
+ARG JAR_FILE
+COPY ${JAR_FILE} app.jar
+ENTRYPOINT ["java","-jar","/app.jar"]

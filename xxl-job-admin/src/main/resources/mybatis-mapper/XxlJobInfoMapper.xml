@@ -32,6 +32,7 @@
 		<result column="glue_updatetime" property="glueUpdatetime" />
 
 		<result column="child_jobid" property="childJobId" />
+		<result column="parent_jobid" property="parentJobId" />
 
 		<result column="trigger_status" property="triggerStatus" />
 		<result column="trigger_last_time" property="triggerLastTime" />
@@ -60,6 +61,7 @@
 		t.glue_remark,
 		t.glue_updatetime,
 		t.child_jobid,
+		t.parent_jobid,
 		t.trigger_status,
 		t.trigger_last_time,
 		t.trigger_next_time
@@ -133,6 +135,7 @@
 			glue_remark,
 			glue_updatetime,
 			child_jobid,
+			parent_jobid,
 			trigger_status,
 			trigger_last_time,
 			trigger_next_time
@@ -157,6 +160,7 @@
 			#{glueRemark},
 			#{glueUpdatetime},
 			#{childJobId},
+			#{parentJobId},
 			#{triggerStatus},
 			#{triggerLastTime},
 			#{triggerNextTime}
@@ -195,6 +199,7 @@
 			glue_remark = #{glueRemark},
 			glue_updatetime = #{glueUpdatetime},
 			child_jobid = #{childJobId},
+			parent_jobid = #{parentJobId},
 			trigger_status = #{triggerStatus},
 			trigger_last_time = #{triggerLastTime},
 			trigger_next_time = #{triggerNextTime}
