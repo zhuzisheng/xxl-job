@@ -86,6 +86,7 @@ public class JobThread extends Thread{
 		 */
 		this.toStop = true;
 		this.stopReason = stopReason;
+		this.interrupt();
 	}
 
     /**
@@ -127,7 +128,8 @@ public class JobThread extends Thread{
 							triggerParam.getExecutorParams(),
 							logFileName,
 							triggerParam.getBroadcastIndex(),
-							triggerParam.getBroadcastTotal());
+							triggerParam.getBroadcastTotal(),
+							triggerParam.getExecutorTimeout());
 
 					// init job context
 					XxlJobContext.setXxlJobContext(xxlJobContext);
@@ -145,7 +147,6 @@ public class JobThread extends Thread{
 
 									// init job context
 									XxlJobContext.setXxlJobContext(xxlJobContext);
-
 									handler.execute();
 									return true;
 								}
@@ -161,7 +162,9 @@ public class JobThread extends Thread{
 
 							// handle result
 							XxlJobHelper.handleTimeout("job execute timeout ");
+							//this.toStop = true;
 						} finally {
+							//toStop = true;
 							futureThread.interrupt();
 						}
 					} else {
@@ -187,10 +190,10 @@ public class JobThread extends Thread{
 
 				} else {
 					if (idleTimes > 30) {
-						if(triggerQueue.size() == 0) {	// avoid concurrent trigger causes jobId-lost
+						//if(triggerQueue.size() == 0) {	// avoid concurrent trigger causes jobId-lost
 							//String key = String.format("%i-%i", jobId, triggerParam.getLogId());
 							XxlJobExecutor.removeJobThread(jobId, logId, "excutor idel times over limit.");
-						}
+						//}
 					}
 				}
 			} catch (Throwable e) {

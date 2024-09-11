@@ -14,6 +14,7 @@ public class XxlJobLog {
 	private int jobGroup;
 	private int jobId;
 	private String globalRunId; 
+	private String runId;
 
 	// execute info
 	private String executorAddress;
@@ -57,6 +58,14 @@ public class XxlJobLog {
 
 	public void setGlobalRunId(String globalRunId) {
 		this.globalRunId = globalRunId;
+	}
+
+	public void setRunId(String runId) {
+		this.runId = runId;
+	}
+
+	public String getRunId() {
+		return runId;
 	}
 
 	public int getJobId() {

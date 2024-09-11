@@ -9,6 +9,7 @@ import com.xxl.job.admin.core.util.I18nUtil;
 import com.xxl.job.core.biz.model.ReturnT;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Component;
 
@@ -66,12 +67,24 @@ public class EmailJobAlarm implements JobAlarm {
                     MimeMessage mimeMessage = XxlJobAdminConfig.getAdminConfig().getMailSender().createMimeMessage();
 
                     MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true);
-                    helper.setFrom(XxlJobAdminConfig.getAdminConfig().getEmailFrom(), personal);
+                    //helper.setFrom(XxlJobAdminConfig.getAdminConfig().getEmailFrom(), personal);
+                    //logger.info("mail from: " +  XxlJobAdminConfig.getAdminConfig().getEmailFrom());
+                    //logger.info("mail email: " + email);
+                    //logger.info("mail title: " + title);
+                    helper.setFrom(XxlJobAdminConfig.getAdminConfig().getEmailFrom());
                     helper.setTo(email);
                     helper.setSubject(title);
                     helper.setText(content, true);
 
+                    //SimpleMailMessage message = new SimpleMailMessage();
+                    //message.setFrom(XxlJobAdminConfig.getAdminConfig().getEmailFrom());
+                    //message.setTo(email);
+                    //message.setSubject(title);
+                    //message.setText(content);
+
+
                     XxlJobAdminConfig.getAdminConfig().getMailSender().send(mimeMessage);
+                    //XxlJobAdminConfig.getAdminConfig().getMailSender().send(message);
                 } catch (Exception e) {
                     logger.error(">>>>>>>>>>> xxl-job, job fail alarm email send error, JobLogId:{}", jobLog.getId(), e);
 

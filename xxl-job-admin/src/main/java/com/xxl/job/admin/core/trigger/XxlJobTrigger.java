@@ -58,7 +58,12 @@ public class XxlJobTrigger {
             return;
         }
         if (executorParam != null) {
-            jobInfo.setExecutorParam(executorParam);
+            if(jobInfo.getExecutorParam() != null) {
+                String jobExecuatorParam = jobInfo.getExecutorParam();
+                jobInfo.setExecutorParam(jobExecuatorParam + ";" + executorParam);
+            } else {
+                jobInfo.setExecutorParam(executorParam);
+            }
         }
         int finalFailRetryCount = failRetryCount>=0?failRetryCount:jobInfo.getExecutorFailRetryCount();
         XxlJobGroup group = XxlJobAdminConfig.getAdminConfig().getXxlJobGroupDao().load(jobInfo.getJobGroup());
@@ -120,7 +125,7 @@ public class XxlJobTrigger {
 
         String executorParam = jobInfo.getExecutorParam();
         Map<String, String> params =  new HashMap<String, String>();
-        if(executorParam != null && executorParam.contains("GLOBAL_RUNID=")) {
+        if(executorParam != null) {
             String[] paramValues = executorParam.split(";");
             for(int i=0; i<paramValues.length; i++) {
                 String[] data = paramValues[i].split("=");
@@ -131,20 +136,25 @@ public class XxlJobTrigger {
         XxlJobLog jobLog = new XxlJobLog();
         jobLog.setJobGroup(jobInfo.getJobGroup());
         jobLog.setJobId(jobInfo.getId());
-        if(params.containsKey("GLOBAL_RUNID")) {
-            jobLog.setGlobalRunId(params.get("GLOBAL_RUNID"));
-        } else {
-            jobLog.setGlobalRunId(UUID.randomUUID().toString());
+        if(!params.containsKey("GLOBAL_RUNID")) {
+            params.put("GLOBAL_RUNID", UUID.randomUUID().toString());
         }
+        String runid = UUID.randomUUID().toString();
+        params.put("RUNID", runid);
+        jobLog.setGlobalRunId(params.get("GLOBAL_RUNID"));
+        jobLog.setRunId(runid);
         jobLog.setTriggerTime(new Date());
         XxlJobAdminConfig.getAdminConfig().getXxlJobLogDao().save(jobLog);
         logger.debug(">>>>>>>>>>> xxl-job trigger start, jobId:{}", jobLog.getId());
+        params.put("JobLogId", String.valueOf(jobLog.getId()));
 
         // 2、init trigger-param
         TriggerParam triggerParam = new TriggerParam();
         triggerParam.setJobId(jobInfo.getId());
         triggerParam.setExecutorHandler(jobInfo.getExecutorHandler());
-        triggerParam.setExecutorParams(jobInfo.getExecutorParam());
+        executorParam = String.join(";", params.keySet().stream().map( x -> x + "=" +params.get(x)).toList());
+        //triggerParam.setExecutorParams(jobInfo.getExecutorParam());
+        triggerParam.setExecutorParams(executorParam);
         triggerParam.setExecutorBlockStrategy(jobInfo.getExecutorBlockStrategy());
         triggerParam.setExecutorTimeout(jobInfo.getExecutorTimeout());
         triggerParam.setLogId(jobLog.getId());
@@ -154,7 +164,6 @@ public class XxlJobTrigger {
         triggerParam.setGlueUpdatetime(jobInfo.getGlueUpdatetime().getTime());
         triggerParam.setBroadcastIndex(index);
         triggerParam.setBroadcastTotal(total);
-        
 
         // 3、init address
         String address = null;

@@ -60,8 +60,10 @@ public class XxlJobContext {
      */
     private String handleMsg;
 
+    private int timeout;
 
-    public XxlJobContext(long jobId, String jobParam, String jobLogFileName, int shardIndex, int shardTotal) {
+
+    public XxlJobContext(long jobId, String jobParam, String jobLogFileName, int shardIndex, int shardTotal, int timeout) {
         this.jobId = jobId;
         this.jobParam = jobParam;
         this.jobLogFileName = jobLogFileName;
@@ -69,6 +71,7 @@ public class XxlJobContext {
         this.shardTotal = shardTotal;
 
         this.handleCode = HANDLE_CODE_SUCCESS;  // default success
+        this.timeout = timeout;
     }
 
     public long getJobId() {
@@ -107,6 +110,9 @@ public class XxlJobContext {
         return handleMsg;
     }
 
+    public int getTimeout() {
+        return timeout;
+    }
     // ---------------------- tool ----------------------
 
     private static InheritableThreadLocal<XxlJobContext> contextHolder = new InheritableThreadLocal<XxlJobContext>(); // support for child thread of job handler)

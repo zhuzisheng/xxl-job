@@ -8,6 +8,8 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  *  1、内嵌编译器如"PythonInterpreter"无法引用扩展包，因此推荐使用java调用控制台进程方式"Runtime.getRuntime().exec()"来运行脚本(shell或python)；
@@ -51,30 +53,33 @@ public class ScriptUtil {
      * @param params
      * @return
      * @throws IOException
+     * @throws TimeoutException 
      */
-    public static int execToFile(String command, String scriptFile, String logFile, String... params) throws IOException {
+    public static int execToFile(String command, String scriptFile, String logFile, String... params) throws IOException, TimeoutException {
 
         FileOutputStream fileOutputStream = null;
         Thread inputThread = null;
         Thread errThread = null;
-        try {
             // file
-            fileOutputStream = new FileOutputStream(logFile, true);
 
             // command
-            List<String> cmdarray = new ArrayList<>();
-            cmdarray.add(command);
-            cmdarray.add(scriptFile);
-            if (params!=null && params.length>0) {
-                for (String param:params) {
-                    cmdarray.add(param);
-                }
+        List<String> cmdarray = new ArrayList<>();
+        cmdarray.add(command);
+        cmdarray.add(scriptFile);
+        if (params!=null && params.length>0) {
+            for (String param:params) {
+                cmdarray.add(param);
             }
-            String[] cmdarrayFinal = cmdarray.toArray(new String[cmdarray.size()]);
+        }
+        String[] cmdarrayFinal = cmdarray.toArray(new String[cmdarray.size() - 1]);
+        Integer timeout = Integer.parseInt(cmdarray.get(cmdarray.size() - 1));
+        // process-exec
+        final Process process = Runtime.getRuntime().exec(cmdarrayFinal);
+        //process.
+        //process.pid()
 
-            // process-exec
-            final Process process = Runtime.getRuntime().exec(cmdarrayFinal);
-
+        try {
+            fileOutputStream = new FileOutputStream(logFile, true);
             // log-thread
             final FileOutputStream finalFileOutputStream = fileOutputStream;
             inputThread = new Thread(new Runnable() {
@@ -101,13 +106,37 @@ public class ScriptUtil {
             errThread.start();
 
             // process-wait
-            int exitValue = process.waitFor();      // exit code: 0=success, 1=error
+            int exitValue = 0;
+            //if(timeout != null && timeout > 0) {
+            //    boolean isTimeout = process.waitFor(timeout, TimeUnit.SECONDS);      // exit code: 0=success, 1=error
+            //    if(!isTimeout) {
+            //        XxlJobHelper.log("Job has reached timeout. Killing process...");
+            //        process.children().forEach(x -> x.destroyForcibly());
+            //        if(process.isAlive()) {
+            //            process.destroyForcibly();
+            //        }
+            //        throw new TimeoutException("time out");
+            //    }
+            //    exitValue = process.exitValue();
+            //} else {
+            try {
+                exitValue = process.waitFor();
+            } catch(InterruptedException e) {
+                process.getOutputStream().close();
+                process.getInputStream().close();
+                XxlJobHelper.log("cleaning running process");
+                process.children().forEach(x -> x.destroyForcibly());
+                if(process.isAlive()) process.destroyForcibly();
+                //throw e; 
+            }
+            //}
 
             // log-thread join
             inputThread.join();
             errThread.join();
-
             return exitValue;
+        //} catch(TimeoutException e) {
+        //    throw new TimeoutException("time out");
         } catch (Exception e) {
             XxlJobHelper.log(e);
             return -1;
@@ -125,6 +154,9 @@ public class ScriptUtil {
             }
             if (errThread != null && errThread.isAlive()) {
                 errThread.interrupt();
+            }
+            if(process.isAlive()) {
+                process.destroy();
             }
         }
     }

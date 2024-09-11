@@ -8,6 +8,7 @@ import com.xxl.job.core.log.XxlJobFileAppender;
 import com.xxl.job.core.util.ScriptUtil;
 
 import java.io.File;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Created by xuxueli on 17/4/27.
@@ -71,13 +72,15 @@ public class ScriptJobHandler extends IJobHandler {
         String logFileName = XxlJobContext.getXxlJobContext().getJobLogFileName();
 
         // script params：0=param、1=分片序号、2=分片总数
-        String[] scriptParams = new String[3];
+        String[] scriptParams = new String[4];
         scriptParams[0] = XxlJobHelper.getJobParam();
         scriptParams[1] = String.valueOf(XxlJobContext.getXxlJobContext().getShardIndex());
         scriptParams[2] = String.valueOf(XxlJobContext.getXxlJobContext().getShardTotal());
+        scriptParams[3] = String.valueOf(XxlJobContext.getXxlJobContext().getTimeout());
 
         // invoke
         XxlJobHelper.log("----------- script file:"+ scriptFileName +" -----------");
+        //try {
         int exitValue = ScriptUtil.execToFile(cmd, scriptFileName, logFileName, scriptParams);
 
         if (exitValue == 0) {
@@ -87,6 +90,13 @@ public class ScriptJobHandler extends IJobHandler {
             XxlJobHelper.handleFail("script exit value("+exitValue+") is failed");
             return ;
         }
+        //} catch(TimeoutException e) {
+		//	XxlJobHelper.log("<br>----------- xxl-job job execute timeout");
+		//	XxlJobHelper.log(e);
+        //    XxlJobHelper.handleTimeout("job execute timeout ");
+			// ha//ndle result
+        //    //throw new TimeoutException("timeout");
+        //}
 
     }
 
