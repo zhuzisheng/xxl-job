@@ -14,13 +14,15 @@ public class KillParam implements Serializable {
         this.jobId = jobId;
     }
     
-    public KillParam(int jobId, long logId) {
+    public KillParam(int jobId, long logId, String batchdir) {
         this.jobId = jobId;
         this.logId = logId;
+        this.bathdir = batchdir;
     }
 
     private int jobId;
     private long logId;
+    private String bathdir;
 
 
     public int getJobId() {
@@ -36,4 +38,10 @@ public class KillParam implements Serializable {
 	public void setLogId(long logId) {
 		this.logId = logId;
 	}
+    public String getBatchDir() {
+        return bathdir; 
+    }
+    public void setBatchDir(String batchdir) {
+        this.bathdir = batchdir; 
+    }
 }

@@ -188,7 +188,7 @@ public class JobLogController {
 		try {
 			ExecutorBiz executorBiz = XxlJobScheduler.getExecutorBiz(log.getExecutorAddress());
 			//runResult = executorBiz.kill(new KillParam(jobInfo.getId()));
-			runResult = executorBiz.kill(new KillParam(jobInfo.getId(), log.getId()));
+			runResult = executorBiz.kill(new KillParam(jobInfo.getId(), log.getId(), null));
 		} catch (Exception e) {
 			logger.error(e.getMessage(), e);
 			runResult = new ReturnT<String>(500, e.getMessage());
@@ -244,4 +244,38 @@ public class JobLogController {
 		return ReturnT.SUCCESS;
 	}
 
+	@RequestMapping("/batchKill")
+	@ResponseBody
+	public ReturnT<String> bactchKill(int id, String batchdir){
+		// base check
+		XxlJobLog log = xxlJobLogDao.load(id);
+		XxlJobInfo jobInfo = xxlJobInfoDao.loadById(log.getJobId());
+		if (jobInfo==null) {
+			return new ReturnT<String>(500, I18nUtil.getString("jobinfo_glue_jobid_unvalid"));
+		}
+		if (ReturnT.SUCCESS_CODE != log.getTriggerCode()) {
+			return new ReturnT<String>(500, I18nUtil.getString("joblog_kill_log_limit"));
+		}
+
+		// request of kill
+		ReturnT<String> runResult = null;
+		try {
+			ExecutorBiz executorBiz = XxlJobScheduler.getExecutorBiz(log.getExecutorAddress());
+			//runResult = executorBiz.kill(new KillParam(jobInfo.getId()));
+			runResult = executorBiz.killbatch(new KillParam(jobInfo.getId(), log.getId(), batchdir));
+		} catch (Exception e) {
+			logger.error(e.getMessage(), e);
+			runResult = new ReturnT<String>(500, e.getMessage());
+		}
+
+		if (ReturnT.SUCCESS_CODE == runResult.getCode()) {
+			log.setHandleCode(ReturnT.FAIL_CODE);
+			log.setHandleMsg( I18nUtil.getString("joblog_kill_log_byman")+":" + (runResult.getMsg()!=null?runResult.getMsg():""));
+			log.setHandleTime(new Date());
+			XxlJobCompleter.updateHandleInfoAndFinish(log);
+			return new ReturnT<String>(runResult.getMsg());
+		} else {
+			return new ReturnT<String>(500, runResult.getMsg());
+		}
+	}
 }

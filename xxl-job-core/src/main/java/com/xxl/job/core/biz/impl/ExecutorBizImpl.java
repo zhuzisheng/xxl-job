@@ -14,8 +14,18 @@ import com.xxl.job.core.thread.JobThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FilenameFilter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Future;
 
 /**
  * Created by xuxueli on 17/3/1.
@@ -180,6 +190,86 @@ public class ExecutorBizImpl implements ExecutorBiz {
 
         LogResult logResult = XxlJobFileAppender.readLog(logFileName, logParam.getFromLineNum());
         return new ReturnT<LogResult>(logResult);
+    }
+
+    @Override
+    public ReturnT<String> killbatch(KillParam killParam) {
+        List<File> killscripts = new ArrayList<>();
+        File batchdir = new File(killParam.getBatchDir());
+        if(batchdir.exists() && batchdir.isDirectory()) {
+            // try to find kill batch script
+            File[] data = batchdir.listFiles(new FilenameFilter() {
+                                                @Override
+                                                public boolean accept(File dir, String name) {
+                                                    return name.equals("kill");
+                                                }
+                                            });
+            if(data.length == 0) {
+                File[] dirs = batchdir.listFiles(new FilenameFilter() {
+                                        @Override
+                                        public boolean accept(File current, String name) {
+                                          return new File(current, name).isDirectory();
+                                        }
+                                    });
+                for(File d : dirs) {
+                    data = batchdir.listFiles(new FilenameFilter() {
+                                                @Override
+                                                public boolean accept(File dir, String name) {
+                                                    return name.equals("kill");
+                                                }
+                                            });
+                    if(data.length != 0) {
+                        for(int i=0; i<data.length; i++) {
+                            killscripts.add(data[i]);
+                        }
+                    }
+                }
+            } else {
+                if(data.length != 0) {
+                    for(int i=0; i<data.length; i++) {
+                        killscripts.add(data[i]);
+                    }
+                }
+            }
+            if(killscripts.size() == 0) {
+                return new ReturnT<String>(ReturnT.FAIL_CODE, "Fail to find kill script in batchdir: " + killParam.getBatchDir());
+            }
+            for(File f : killscripts) {
+                ProcessBuilder builder = new ProcessBuilder();
+                builder.command(f.getAbsolutePath());
+                builder.directory(f.getParentFile());
+                Process process = null;
+                int exitCode = 0;
+                String errorMessage = "";
+                try {
+                    process = builder.start();
+                    exitCode = process.waitFor();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    errorMessage += e.toString();
+                    exitCode = 1;
+                    return new ReturnT<String>(ReturnT.FAIL_CODE, "Fail to run kill script in batchdir: " + f.getParentFile() + "; Error: " + errorMessage);
+                }
+                InputStream stderr = process.getErrorStream();
+                BufferedReader errorred = new BufferedReader(new InputStreamReader(stderr));
+                String line;
+                if(exitCode != 0) {
+                    try {
+                        while ((line = errorred.readLine()) != null) {
+                            errorMessage += line;
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+                if(exitCode != 0) {
+                    return new ReturnT<String>(ReturnT.FAIL_CODE, "Fail to run kill script in batchdir: " + f.getParentFile() + "; Error: " + errorMessage);
+                } 
+            }
+            return new ReturnT<String>(ReturnT.SUCCESS_CODE, "run kill script in batchdir: " + killParam.getBatchDir() + " PASS");
+        } else {
+            return new ReturnT<String>(ReturnT.FAIL_CODE, "Fail to find the batch dir: " + killParam.getBatchDir());
+        }
     }
 
 }

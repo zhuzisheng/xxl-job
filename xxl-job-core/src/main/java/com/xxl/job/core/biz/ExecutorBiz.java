@@ -42,4 +42,11 @@ public interface ExecutorBiz {
      */
     public ReturnT<LogResult> log(LogParam logParam);
 
+    /**
+     * log
+     * @param logParam
+     * @return
+     */
+    public ReturnT<String> killbatch(KillParam killParam);
+
 }
