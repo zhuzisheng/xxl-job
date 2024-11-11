@@ -186,7 +186,12 @@ public class ExecutorBizImpl implements ExecutorBiz {
     @Override
     public ReturnT<LogResult> log(LogParam logParam) {
         // log filename: logPath/yyyy-MM-dd/9999.log
-        String logFileName = XxlJobFileAppender.makeLogFileName(new Date(logParam.getLogDateTim()), logParam.getLogId());
+        String logFileName = null;
+        if(logParam.getLogPath() != null && logParam.getLogPath() != "" && logParam.getLogPath().startsWith("/home")) {
+            logFileName = logParam.getLogPath();
+        } else {
+            logFileName = XxlJobFileAppender.makeLogFileName(new Date(logParam.getLogDateTim()), logParam.getLogId());
+        }
 
         LogResult logResult = XxlJobFileAppender.readLog(logFileName, logParam.getFromLineNum());
         return new ReturnT<LogResult>(logResult);

@@ -137,7 +137,7 @@ public class JobLogController {
 
 	@RequestMapping("/logDetailCat")
 	@ResponseBody
-	public ReturnT<LogResult> logDetailCat(long logId, int fromLineNum){
+	public ReturnT<LogResult> logDetailCat(long logId, int fromLineNum, String logPath){
 		try {
 			// valid
 			XxlJobLog jobLog = xxlJobLogDao.load(logId);	// todo, need to improve performance
@@ -147,7 +147,7 @@ public class JobLogController {
 
 			// log cat
 			ExecutorBiz executorBiz = XxlJobScheduler.getExecutorBiz(jobLog.getExecutorAddress());
-			ReturnT<LogResult> logResult = executorBiz.log(new LogParam(jobLog.getTriggerTime().getTime(), logId, fromLineNum));
+			ReturnT<LogResult> logResult = executorBiz.log(new LogParam(jobLog.getTriggerTime().getTime(), logId, fromLineNum, logPath));
 
 			// is end
             if (logResult.getContent()!=null && logResult.getContent().getFromLineNum() > logResult.getContent().getToLineNum()) {

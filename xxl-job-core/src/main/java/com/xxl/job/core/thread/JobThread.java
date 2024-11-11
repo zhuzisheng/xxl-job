@@ -50,6 +50,10 @@ public class JobThread extends Thread{
 
 		// assign job thread name
 		this.setName("xxl-job, JobThread-"+jobId+"-"+logId+"-"+System.currentTimeMillis());
+
+		String arms_dev = System.getenv("arms_dev");
+        logger.info("arms_dev: " + arms_dev);
+
 	}
 	public IJobHandler getHandler() {
 		return handler;
