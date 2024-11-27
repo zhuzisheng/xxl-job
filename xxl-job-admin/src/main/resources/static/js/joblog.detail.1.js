@@ -17,8 +17,11 @@ $(function() {
             return;
         }
 
+        const urlParams = new URLSearchParams(window.location.search);
+        const logPath = urlParams.get('logPath');
         // load
         console.log("pullLog, fromLineNum:" + fromLineNum);
+        console.log("pulllog, logPath:" + logPath);
 
         $.ajax({
             type : 'POST',
@@ -26,7 +29,8 @@ $(function() {
             url : base_url + '/joblog/logDetailCat',
             data : {
                 "logId":logId,
-                "fromLineNum":fromLineNum
+                "fromLineNum":fromLineNum,
+                "logPath": logPath
             },
             dataType : "json",
             success : function(data){

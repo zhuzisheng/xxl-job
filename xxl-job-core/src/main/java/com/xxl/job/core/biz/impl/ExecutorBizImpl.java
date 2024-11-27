@@ -241,7 +241,9 @@ public class ExecutorBizImpl implements ExecutorBiz {
             }
             for(File f : killscripts) {
                 ProcessBuilder builder = new ProcessBuilder();
-                builder.command(f.getAbsolutePath());
+                String killCommand =  f.getAbsolutePath();
+                if(killParam.getSoft()) killCommand += " -soft";
+                builder.command(killCommand);
                 builder.directory(f.getParentFile());
                 Process process = null;
                 int exitCode = 0;

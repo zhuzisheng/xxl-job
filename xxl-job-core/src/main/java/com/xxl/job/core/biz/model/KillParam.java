@@ -23,7 +23,7 @@ public class KillParam implements Serializable {
     private int jobId;
     private long logId;
     private String bathdir;
-
+    private Boolean soft;
 
     public int getJobId() {
         return jobId;
@@ -43,5 +43,11 @@ public class KillParam implements Serializable {
     }
     public void setBatchDir(String batchdir) {
         this.bathdir = batchdir; 
+    }
+    public Boolean getSoft() {
+        return soft;
+    }
+    public void setPending(Boolean soft){
+        this.soft = soft;
     }
 }

@@ -269,10 +269,10 @@ public class JobLogController {
 		}
 
 		if (ReturnT.SUCCESS_CODE == runResult.getCode()) {
-			log.setHandleCode(ReturnT.FAIL_CODE);
-			log.setHandleMsg( I18nUtil.getString("joblog_kill_log_byman")+":" + (runResult.getMsg()!=null?runResult.getMsg():""));
-			log.setHandleTime(new Date());
-			XxlJobCompleter.updateHandleInfoAndFinish(log);
+			//log.setHandleCode(ReturnT.FAIL_CODE);
+			//log.setHandleMsg( I18nUtil.getString("joblog_kill_log_byman")+":" + (runResult.getMsg()!=null?runResult.getMsg():""));
+			//log.setHandleTime(new Date());
+			//XxlJobCompleter.updateHandleInfoAndFinish(log);
 			return new ReturnT<String>(runResult.getMsg());
 		} else {
 			return new ReturnT<String>(500, runResult.getMsg());
