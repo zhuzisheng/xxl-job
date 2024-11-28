@@ -188,7 +188,8 @@ public class JobLogController {
 		try {
 			ExecutorBiz executorBiz = XxlJobScheduler.getExecutorBiz(log.getExecutorAddress());
 			//runResult = executorBiz.kill(new KillParam(jobInfo.getId()));
-			runResult = executorBiz.kill(new KillParam(jobInfo.getId(), log.getId(), null));
+			runResult = executorBiz.kill(new KillParam(jobInfo.getId(), log.getId(), null, null));
+			
 		} catch (Exception e) {
 			logger.error(e.getMessage(), e);
 			runResult = new ReturnT<String>(500, e.getMessage());
@@ -246,7 +247,7 @@ public class JobLogController {
 
 	@RequestMapping("/batchKill")
 	@ResponseBody
-	public ReturnT<String> bactchKill(int id, String batchdir){
+	public ReturnT<String> bactchKill(int id, String batchdir, Boolean soft){
 		// base check
 		XxlJobLog log = xxlJobLogDao.load(id);
 		XxlJobInfo jobInfo = xxlJobInfoDao.loadById(log.getJobId());
@@ -262,7 +263,7 @@ public class JobLogController {
 		try {
 			ExecutorBiz executorBiz = XxlJobScheduler.getExecutorBiz(log.getExecutorAddress());
 			//runResult = executorBiz.kill(new KillParam(jobInfo.getId()));
-			runResult = executorBiz.killbatch(new KillParam(jobInfo.getId(), log.getId(), batchdir));
+			runResult = executorBiz.killbatch(new KillParam(jobInfo.getId(), log.getId(), batchdir, soft));
 		} catch (Exception e) {
 			logger.error(e.getMessage(), e);
 			runResult = new ReturnT<String>(500, e.getMessage());
