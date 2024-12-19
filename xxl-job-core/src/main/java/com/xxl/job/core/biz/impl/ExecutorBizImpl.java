@@ -201,6 +201,7 @@ public class ExecutorBizImpl implements ExecutorBiz {
     public ReturnT<String> killbatch(KillParam killParam) {
         List<File> killscripts = new ArrayList<>();
         File batchdir = new File(killParam.getBatchDir());
+        Boolean soft = killParam.getSoft();
         if(batchdir.exists() && batchdir.isDirectory()) {
             // try to find kill batch script
             File[] data = batchdir.listFiles(new FilenameFilter() {
@@ -242,8 +243,13 @@ public class ExecutorBizImpl implements ExecutorBiz {
             for(File f : killscripts) {
                 ProcessBuilder builder = new ProcessBuilder();
                 String killCommand =  f.getAbsolutePath();
-                if(killParam.getSoft()) killCommand += " -soft";
-                builder.command(killCommand);
+                //if(soft != null && soft) killCommand += " -soft";
+                if(soft != null && soft) {
+                    logger.info("soft kill");
+                    builder.command(killCommand, "-soft");
+                } else {
+                    builder.command(killCommand);
+                }
                 builder.directory(f.getParentFile());
                 Process process = null;
                 int exitCode = 0;

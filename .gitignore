@@ -5,3 +5,11 @@
 target/
 .DS_Store
 .gitattributes
+.settings
+*/.settings
+*/*/.settings
+.vscode/
+*/*/data
+data
+xxl-job-executor-samples/xxl-job-executor-sample-springboot/.settings/org.eclipse.jdt.core.prefs
+xxl-job-executor-samples/xxl-job-executor-sample-frameless/.settings/org.eclipse.jdt.core.prefs
